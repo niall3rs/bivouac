@@ -1,0 +1,20 @@
+Feedback from Alexander Voss at 04/03/2014 19:12:
+
+Functionality implemented:
+--------------------------
+
+At first I was struck by the minimalist design but when added tasks I saw that this actually helped to keep the display clear and usable. The system allows multiple projects to be set up by creating multiple files and each can be shared with collaboratorѕ through the application itself. Tasks can be created within each project and because they are modelled as collaborative maps any edits of individual fields within them are immediately visible to any collaborators. A couple of functions are missing such as one to delete tasks or move them into an archive.
+
+Code style:
+-----------
+The code is included in the HTML. In the interest of better overview and a shared division of labour between designers and developers it is usually preferable to separate the two. The use of the modelling elements of the Google Drive API is excellent. The fact that the edits are immediately visible adds to the user experience. Well done.
+
+The addTask function is a bit long, this could probably be split into multiple functions. The programmatic generation of the table seems a bit tedious. Using jQuery this could be simplified significantly.
+
+Report:
+-------
+The report is very well written and outlines the design of the code clearly, shows the model used and discusses extensions that would make the system more usable and complete. Well done.
+
+Overall:
+--------
+Overall, this is an excellent submission with no significant defects, well done. A few extensions were mentioned in the report. In addition to this, adding relationships between tasks and between tasks and users would have been good.

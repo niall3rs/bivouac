@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title> Bivouac </title>
+	
+	<style>
+		table{border:1px solid black; border-radius:5px; float:left; margin:2px;background-color:#55AAFF;}
+		th{border-bottom: 1px solid black; font-weight:bold; font-size:12pt;}
+		input{font-family:inherit; font-weight:inherit; font-size:inherit;border-radius:5px;padding-left:5px}
+		input[type=text]{border:none;}
+		input#datepicker{border:1px solid grey;}
+		body{font-family:Calibri;}
+		#addTaskButton{clear:both;}
+	</style>
+	
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+	<script type="text/javascript" src="my-realtime-client-utils.js"></script>
+</head>
+
+<body onLoad='startRealtime()'>
+
+	<div id="container">
+	
+		<h1>Bivouac Project Manager</h1>
+	
+		<button id="authorizeButton" disabled>Click here to authorise</button>
+	
+		<p>
+			Other projects (by ID):	
+			<select id = "projectList"></select><button id="loadButton">Load</button>
+		</p>
+		
+		<h2><input type="text" id="title"></h2>
+	
+		<button id = "shareButton">Add collaborator: </button><input id="collaborator">
+	
+		<br><br>
+	
+		<button id="addTaskButton">Add task</button>
+	
+		<div id="taskSpace">
+			<!-- Tasks go here -->
+		</div>
+	
+	</div>
+	
+	<script>
+	
+		//Adds a task from the Realtime model to the page, and adds events listeners to keep the page and model in sync
+		function addTask(task) {
+			//Variable declaration block
+			
+			var taskSpace = document.getElementById("taskSpace"),
+			
+				//Table elements
+				tbl = document.createElement("table"),
+				row_1 = tbl.insertRow(0),
+				row_2 = tbl.insertRow(1),
+				row_3 = tbl.insertRow(2),
+				row_4 = tbl.insertRow(3),
+				headingCell = document.createElement("th"),
+				dateKeyCell = document.createElement("td"),
+				dateValueCell = document.createElement("td"),
+				priorityKeyCell = document.createElement("td"),
+				priorityValueCell = document.createElement("td"),
+				statusKeyCell = document.createElement("td"),
+				statusValueCell = document.createElement("td"),
+				
+				//Nodes that will display task metadata
+				pageTaskName = document.createElement("input"),
+				pageTaskDate = document.createElement("input"),
+				pageTaskPriority = document.createElement("select"),
+				pageTaskStatus = document.createElement("select"),
+				
+				//Options for priority and status
+				lowPriorityOption = document.createElement("option"),
+				medPriorityOption = document.createElement("option"),
+				highPriorityOption = document.createElement("option"),
+				todoStatus = document.createElement("option"),
+				inprogStatus = document.createElement("option"),
+				doneStatus = document.createElement("option"),
+				
+				//Getting values from model
+				modelTaskName = task.get('name'),
+				modelTaskDate = task.get('date'),
+				modelTaskPriority = task.get('priority'),
+				modelTaskStatus = task.get('status');
+			
+			//Add the cells to the rows
+			row_1.appendChild(headingCell);
+			row_2.appendChild(dateKeyCell);
+			row_2.appendChild(dateValueCell);
+			row_3.appendChild(priorityKeyCell);
+			row_3.appendChild(priorityValueCell);
+			row_4.appendChild(statusKeyCell);
+			row_4.appendChild(statusValueCell);
+			
+			//Insert task name field and bind it to the model
+			headingCell.colSpan = 2;
+			headingCell.appendChild(pageTaskName);
+			pageTaskName.type = "text";
+			gapi.drive.realtime.databinding.bindString(modelTaskName,pageTaskName);
+			
+			//Insert date field and bind it to the model
+			dateKeyCell.innerText = "Due date:";
+			dateValueCell.appendChild(pageTaskDate);
+			pageTaskDate.type = "text";
+			pageTaskDate.size = 15;
+			gapi.drive.realtime.databinding.bindString(modelTaskDate,pageTaskDate);
+			
+			//Insert priority field, dropdown and values
+			priorityKeyCell.innerText = "Priority:";
+			priorityValueCell.appendChild(pageTaskPriority);
+			pageTaskPriority.appendChild(lowPriorityOption);
+			pageTaskPriority.appendChild(medPriorityOption);
+			pageTaskPriority.appendChild(highPriorityOption);
+			
+			lowPriorityOption.value = "low";
+			lowPriorityOption.innerText = "Low";
+			medPriorityOption.value = "med";
+			medPriorityOption.innerText = "Medium";
+			highPriorityOption.value = "high";
+			highPriorityOption.innerText = "High";
+			
+			//Insert status field, dropdown and values
+			statusKeyCell.innerText = "Status:";
+			statusValueCell.appendChild(pageTaskStatus);
+			pageTaskStatus.appendChild(todoStatus);
+			pageTaskStatus.appendChild(inprogStatus);
+			pageTaskStatus.appendChild(doneStatus);
+			
+			todoStatus.value = "todo";
+			todoStatus.innerText = "To do";
+			inprogStatus.value =  "inprog";
+			inprogStatus.innerText = "In progress";
+			doneStatus.value = "done";
+			doneStatus.innerText = "Done";
+			
+			//Re-checks the priority and status from the model and updates the page accordingly
+			var updateDropdowns = function () {
+			
+				modelTaskPriority = task.get('priority');
+				modelTaskStatus = task.get('status');
+			
+				switch(modelTaskPriority) {
+					case 'low':
+						lowPriorityOption.setAttribute('selected','true');
+						break;
+					case 'med':
+						medPriorityOption.setAttribute('selected','true');
+						break;
+					case 'high':
+						highPriorityOption.setAttribute('selected','true');
+						break;
+				}
+				
+				switch(modelTaskStatus) {
+					case "todo":
+						todoStatus.setAttribute('selected','true');
+						break;
+					case "inprog":
+						inprogStatus.setAttribute('selected','true');
+						break;
+					case "done":
+						doneStatus.setAttribute('selected','true');
+						break;
+				}
+			}
+			
+			//Call this function once to ensure page and model match
+			updateDropdowns();
+			
+			//Event listeners to update the model given a change on the page
+			pageTaskPriority.onchange = function () {task.set('priority', pageTaskPriority.value);};
+			pageTaskStatus.onchange = function () {task.set('status', pageTaskStatus.value);};
+			
+			//Event listener to update the page given a change in the model
+			task.addEventListener(gapi.drive.realtime.EventType.VALUE_CHANGED,function () {updateDropdowns()});
+			
+			//Finally, add the task to the div where the tasks are kept
+			taskSpace.appendChild(tbl);
+		}
+	
+		//Creates a new task and adds it to the Realtime model
+		function createTask (doc) {
+			var taskList = doc.getModel().getRoot().get('taskList'),
+				newTask = doc.getModel().createMap(),
+				taskName = doc.getModel().createString('New task'),
+				taskDueDate = doc.getModel().createString('');
+				
+			newTask.set('name', taskName);
+			newTask.set('date', taskDueDate);
+			newTask.set('priority','med');
+			newTask.set('status','todo');
+
+			taskList.push(newTask);
+		}
+		
+		//Gets other project files that the user has access to and loads them into a drop down menu. Current file is ignored.
+		//TODO Use file names instead of file IDs
+		function loadOtherProjects(inputArray) {
+			var URL = document.URL,
+				projectList = document.getElementById('projectList');
+			
+			for (var x in inputArray) {
+				if (URL.indexOf(inputArray[x].id) == -1) {
+					var option = document.createElement("option");
+					option.value = option.innerText = inputArray[x].id;
+					projectList.appendChild(option);
+				}
+			}
+		}
+		
+		//Takes the file ID from the drop down menu and redirects the user to this project
+		//TODO Alter this so that file names as opposed to IDs were used
+		function loadProject () {
+			var fileIdString = document.getElementById("projectList").value
+				fileIdArray = [],
+				userId = document.URL.slice(document.URL.indexOf("userId=")+7);
+			
+			fileIdArray.push(fileIdString);
+			
+			rtclient.RealtimeLoader.prototype.redirectTo(fileIdArray,userId);
+			location.reload();
+		}
+		
+		//Shares the project file with another user, using the permission.insert API. Contains some small email validation
+		//TODO Improve user experience when receiving sharing permission.
+		function shareProject () {
+			var subURL = document.URL.slice(document.URL.indexOf("fileIds=")+8),
+				fileId = subURL.slice(0,subURL.indexOf("&")),
+				collaborator = document.getElementById("collaborator").value,
+				atpos = collaborator.indexOf("@"),
+				dotpos = collaborator.lastIndexOf(".");
+			
+			//Functionality taken from http://www.w3schools.com/js/js_form_validation.asp
+			if (atpos<1 || dotpos<atpos+2 || dotpos+2>=collaborator.length) {
+				alert("Not a valid e-mail address");
+				return false;
+			} else {
+				insertPermission(fileId, collaborator, "user", "writer");
+			}
+		}
+	
+		//Creates a Project title, and list of tasks. Each task is a collaborative map.
+		function initializeModel(model) {
+			var projectTitle = model.createString('New Project'),
+				taskList = model.createList(),
+				task_1 = model.createMap(),
+				taskName = model.createString('New task'),
+				taskDueDate = model.createString('');
+			
+			model.getRoot().set('title', projectTitle);
+			model.getRoot().set('taskList', taskList);
+			taskList.push(task_1);
+			task_1.set('name', taskName);
+			task_1.set('date', taskDueDate);
+			task_1.set('priority','med');
+			task_1.set('status','todo');
+		}
+		
+		function onFileLoaded (doc) {			
+			var pageTitle = document.getElementById('title'),
+				addTaskButton = document.getElementById('addTaskButton'),
+				loadButton = document.getElementById('loadButton'),
+				shareButton = document.getElementById('shareButton'),
+				modelTitle = doc.getModel().getRoot().get('title'),
+				modelTaskList  = doc.getModel().getRoot().get('taskList'),
+				modelTaskArray = modelTaskList.asArray(),
+				filesArray=[];
+			
+			//Event listener to bind the project title on the page and in the model
+			gapi.drive.realtime.databinding.bindString(modelTitle,pageTitle);
+			
+			//Add each task in the model to the page
+			for (var i=0 ; i<modelTaskArray.length ; i++) {
+				addTask(modelTaskList.get(i));
+			}
+			
+			//Tie the add task button to the createTask function
+			addTaskButton.onclick = function() {createTask(doc)};
+			
+			//Event listener to add a new task to the page when one is added to the model
+			modelTaskList.addEventListener(gapi.drive.realtime.EventType.VALUES_ADDED, function() {addTask(modelTaskList.get(modelTaskList.length-1))});
+			
+			//Load other files into dropdown
+			rtclient.listFiles(function(x) {loadOtherProjects(x.items)});
+			
+			//Attach load function to button
+			loadButton.onclick = function() {loadProject()};
+			
+			//Attach sharing function to button
+			shareButton.onclick = function() {shareProject()};
+		}
+		
+		var realtimeOptions = {
+			clientId: '631076846705.apps.googleusercontent.com',
+			authButtonElementId: 'authorizeButton',
+			initializeModel: initializeModel,
+			autoCreate: true,
+			defaultTitle: "Bivouac Project File",
+			newFileMimeType: null,
+			onFileLoaded: onFileLoaded,
+			registerTypes: null,
+			afterAuth: null
+		}
+		
+		function startRealtime() {
+			var realtimeLoader = new rtclient.RealtimeLoader(realtimeOptions);
+			realtimeLoader.start();
+		}
+			
+	</script>
+
+</body>
+
+</html>
